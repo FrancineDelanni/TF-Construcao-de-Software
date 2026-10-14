@@ -4,7 +4,7 @@
 
 **PUCRS – Escola Politécnica | Construção de Software – 2026/2 | Projeto Integrador – Pacote 1**
 
-**Grupo:** [nome do grupo] | **Integrantes:** [nome 1], [nome 2], [nome 3], [nome 4], [nome 5]
+**Grupo:** [Grupo 10] | **Integrantes:** [João Vitor Krampe], [Leticia Nunes], [Francine Delanni], [Luis Eduardo Trein], [Enzo Picoli]
 
 **Versão:** 1.0 | **Data:** 12/10/2026 | **Status:** Rascunho para revisão do grupo
 
