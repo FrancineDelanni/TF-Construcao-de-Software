@@ -377,8 +377,8 @@ Ao desenhar as telas apareceram inconsistências entre os documentos. Cada uma p
 
 | Documento | Arquivo |
 |---|---|
-| Processo de Desenvolvimento com IA | `01-processo-desenvolvimento.md` |
-| Documento de Visão | `02-visao.md` |
-| Backlog (Story Mapping) | `03-backlog.md` |
-| Requisitos Não-Funcionais | `04-requisitos-nao-funcionais.md` |
-| Mockups e Mapa de Navegação | `05-mockups-mapa-navegacao.md` |
+| Processo de Desenvolvimento com IA | [01-processo-desenvolvimento.md](../docs/01-processo-desenvolvimento.md) |
+| Documento de Visão | [02-visao.md](../docs/02-visao.md) |
+| Backlog (Story Mapping) | [03-backlog.md](../docs/03-backlog.md) |
+| Requisitos Não-Funcionais | [04-requisitos-nao-funcionais.md](../docs/04-requisitos-nao-funcionais.md) |
+| Mockups e Mapa de Navegação | [05-mockups-mapa-navegacao.md](05-mockups-mapa-navegacao.md) |

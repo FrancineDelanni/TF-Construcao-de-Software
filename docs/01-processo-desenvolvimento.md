@@ -298,7 +298,7 @@ O detalhamento do processo de GCS será entregue no Pacote 2. Resumo das regras 
 
 | Documento | Arquivo |
 |---|---|
-| Documento de Visão | `02-documento-visao.md` |
-| Backlog (Story Mapping) | `03-backlog-story-mapping.md` |
-| Requisitos Não-Funcionais | `04-requisitos-nao-funcionais.md` |
-| Mockups e Mapa de Navegação | `05-mockups-mapa-navegacao.md` |
+| Documento de Visão | [02-visao.md](02-visao.md) |
+| Backlog (Story Mapping) | [03-backlog.md](03-backlog.md) |
+| Requisitos Não-Funcionais | [04-requisitos-nao-funcionais.md](04-requisitos-nao-funcionais.md) |
+| Mockups e Mapa de Navegação | [05-mockups-mapa-navegacao.md](../Mockups/05-mockups-mapa-navegacao.md) |

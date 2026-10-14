@@ -264,7 +264,7 @@ stateDiagram-v2
 ## 12. Próximos Passos
 
 1. Revisão deste documento pelo grupo e definição do nome final e das metas numéricas ([X], [Y], [Z]).
-2. Elaboração do backlog (épicos e histórias) em Story Mapping: `03-backlog-story-mapping.md`.
-3. Detalhamento dos requisitos não-funcionais: `04-requisitos-nao-funcionais.md`.
-4. Mockups e mapa de navegação: `05-mockups-mapa-navegacao.md`.
-5. Processo de desenvolvimento suportado por IA: `01-processo-desenvolvimento-ia.md`.
+2. Elaboração do backlog (épicos e histórias) em Story Mapping: [03-backlog.md](03-backlog.md).
+3. Detalhamento dos requisitos não-funcionais: [04-requisitos-nao-funcionais.md](04-requisitos-nao-funcionais.md).
+4. Mockups e mapa de navegação: [05-mockups-mapa-navegacao.md](../Mockups/05-mockups-mapa-navegacao.md).
+5. Processo de desenvolvimento suportado por IA: [01-processo-desenvolvimento.md](01-processo-desenvolvimento.md).

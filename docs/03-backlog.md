@@ -188,4 +188,4 @@
 
 ## 7. Definition of Ready / Done
 
-Ver `01-processo-desenvolvimento-ia.md`, seções 2.2 e 2.3.
+Ver [01-processo-desenvolvimento.md](01-processo-desenvolvimento.md), seções 2.2 e 2.3.
