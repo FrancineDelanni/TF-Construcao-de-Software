@@ -345,9 +345,9 @@ Todo chip traz o nome do estado em texto, então a cor nunca é a única pista (
 | US-35 | T13 | |
 | US-41 | T15 | Aba Contas |
 | US-42 | T03 | Filtros |
-| US-08, 16, 22, 23, 26, 32, 33, 34, 36, 37, 38, 39, 40 | — | Backend e infraestrutura, sem tela |
+| US-08, 16, 22, 23, 26, 32, 33, 34, 36, 37, 38, 39, 40, 43 | — | Backend e infraestrutura, sem tela |
 
-**Cobertura:** 28 das 42 histórias têm tela ou elemento de tela. As outras 14 são 13 histórias de backend, mensageria e DevOps mais a US-03, que é invisível quando funciona. A US-34 alimenta a T13, mas não tem tela própria.
+**Cobertura:** 28 das 43 histórias têm tela ou elemento de tela. As outras 15 são 14 histórias de backend, mensageria e DevOps mais a US-03, que é invisível quando funciona. A US-34 alimenta a T13, mas não tem tela própria.
 
 ---
 
@@ -360,7 +360,7 @@ Ao desenhar as telas apareceram inconsistências entre os documentos. Cada uma p
 | 1 | **Estado "Cancelado".** US-15 e US-24 falam em pedido cancelado, mas a máquina de estados (Visão 5.3, US-19 e o exemplo de `CLAUDE.md` em `01-processo-desenvolvimento.md`, seção 6.2) tem só Criado, Reservado, Aguardando, Pago e Expirado. | T08 mostra o chip "Cancelado" | Incluir o estado Cancelado na máquina e nos testes, ou tratar o cancelamento como Expirado |
 | 2 | **Nova tentativa após recusa.** A Visão só permite Aguardando → Expirado. A T07 oferece "Tentar novamente" mantendo a reserva, o que exige a transição Aguardando → Reservado. A US-21 admite "nova tentativa ou Expirado". | T07, diagrama 4.2 | Decidir uma regra: recusa volta a Reservado (nova transição) ou leva direto a Expirado |
 | 3 | **Download do PDF no R1.** A US-27 (PDF com QR Code) é R1, mas a US-30 (Meus ingressos) é R2, então o MVP não teria onde baixar o ingresso. | T06, T09 | Puxar a US-30 para o R1 ou pôr o botão de download direto na T06 |
-| 4 | **Consulta do Operador.** A Visão (4.1) diz que o Operador consulta pedidos e ingressos, mas nenhuma história cobre isso. | Campo "Consultar por código" na T14 | Criar uma US nova (ex.: US-43) ou tirar o campo |
+| 4 | **Consulta do Operador.** A Visão (4.1) diz que o Operador consulta pedidos e ingressos, mas nenhuma história cobre isso. | Campo "Consultar por código" na T14 | Criar uma US adicional (próximo ID livre do backlog) ou tirar o campo |
 | 5 | **Telas de sessão e acesso.** Não há mockup para "Acesso negado" (403) nem "Sessão expirada" (401). | US-03, US-05 | Redirecionar para a página inicial do papel (403) e para a T01 (401), com mensagem curta |
 
 ---

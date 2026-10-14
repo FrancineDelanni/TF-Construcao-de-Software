@@ -144,6 +144,7 @@ stateDiagram-v2
 | OBJ-08 | Reprodutibilidade | Ambiente completo sobe com um único `docker compose up` (backend, frontend, bancos, Kafka e UI de mensageria) |
 | OBJ-09 | Observabilidade | Painel exibindo métricas de navegação e compras em tempo real |
 | OBJ-10 | Governança de código | Pipeline de CI executa linters, testes e build a cada Pull Request e merge na branch `develop` |
+| OBJ-11 | (Opcional, R3) Prova de procedência de ingressos | Para os eventos incluídos na feature, um verificador confirma que os registros apresentados correspondem aos compromissos criptográficos ancorados, sem que falhas da blockchain afetem o fluxo principal |
 
 > Os valores **[X]**, **[Y]** e **[Z]** devem ser definidos pelo grupo após estimar a capacidade do ambiente de teste.
 
@@ -163,6 +164,7 @@ stateDiagram-v2
 - Notificações por e-mail e atualização em tempo real via WebSocket.
 - Validação de ingressos por QR Code pelo operador.
 - Ingestão de eventos de navegação e compras e painel analítico em tempo real.
+- Prova criptográfica verificável do histórico de emissão, revogação e validação de ingressos, ancorada assincronamente em blockchain.
 - Pipeline de CI/CD, Docker Compose, testes automatizados e documentação (C4, processo com IA, GCS).
 
 ### 7.2 Fora do escopo
@@ -173,6 +175,7 @@ stateDiagram-v2
 - Aplicativo móvel nativo (a interface é uma SPA responsiva).
 - Precificação dinâmica e programas de fidelidade.
 - Implantação em nuvem com orquestração avançada (ex.: Kubernetes) em produção.
+- Uso de blockchain para liquidar pagamentos, armazenar dados pessoais ou substituir o banco operacional, a assinatura do QR Code ou o controle de entrada.
 
 > Itens do escopo podem ser reclassificados (MVP, Release 2, Release 3) no Story Mapping.
 
@@ -218,6 +221,7 @@ stateDiagram-v2
 | R-08 | Divergência entre documentação e código | Média | Médio | Atualização da documentação a cada pacote; ADRs; revisão cruzada |
 | R-09 | Expiração de reserva falhar (timer perdido) | Média | Alto | Expiração garantida por TTL e por job de reconciliação; evento de expiração publicado no broker |
 | R-10 | Distribuição desigual de trabalho no grupo | Média | Médio | Responsáveis por frente, revisão cruzada e acompanhamento no quadro do projeto |
+| R-11 | Rede blockchain indisponível, custosa ou controlada por poucos participantes; falsa percepção de que a cadeia garante por si só a legitimidade do ingresso | Média | Médio | Feature opcional e assíncrona; prova limitada à integridade/proveniência dos registros; comparar rede local permissionada e testnet, proteger chaves, não publicar dados pessoais e manter os fluxos convencionais disponíveis |
 
 ---
 
@@ -253,6 +257,7 @@ stateDiagram-v2
 | **C4** | Modelo de documentação arquitetural em quatro níveis (Contexto, Contêineres, Componentes, Código) |
 | **Story Mapping** | Técnica de organização do backlog por jornada do usuário e releases |
 | **MVP / Walking skeleton** | Menor versão funcional ponta a ponta do produto |
+| **Compromisso criptográfico** | Hash de um registro canônico que permite verificar sua integridade sem publicar o conteúdo original |
 
 ---
 

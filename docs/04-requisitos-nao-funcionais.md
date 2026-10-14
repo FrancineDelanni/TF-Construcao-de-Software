@@ -127,9 +127,22 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 | NFR-LGP-02 | Dados de teste fictícios | 0 dados reais em repositório e ambientes de demonstração | Revisão | M | Processo com IA |
 | NFR-LGP-03 | Retenção de logs e auditoria definida | Política de retenção documentada ([90 dias]) | Revisão | C | US-07 |
 
+## 12. Prova de procedência em blockchain (Could Have)
+
+Estes requisitos aplicam-se somente se o grupo priorizar a US-43 na R3. A blockchain é uma camada de prova complementar; não substitui a fonte operacional, as garantias existentes de assinatura, concorrência e validação, nem se torna dependência síncrona do fluxo principal.
+
+| ID | Requisito | Métrica / Critério | Verificação | Prior. | Relacionados |
+|---|---|---|---|---|---|
+| NFR-BLK-01 | **Minimização e privacidade on-chain** | 0 dados pessoais, conteúdo do ingresso, QR/PDF, número de pedido ou identificador de assento em transações, eventos ou estado do contrato | Inspeção do contrato e testes dos payloads publicados | M | US-43, NFR-LGP-01 |
+| NFR-BLK-02 | **Integridade verificável** | 100% dos registros de prova válidos conferem com o compromisso on-chain; qualquer alteração nos dados apresentados é detectada e reportada como não correspondente | Testes unitários com vetores válidos e dados adulterados; teste de integração com a rede selecionada | M | OBJ-11, US-43 |
+| NFR-BLK-03 | **Idempotência da ancoragem** | Reentregar N vezes o mesmo evento de domínio produz exatamente um compromisso lógico para aquele evento | Teste de integração reprocessando mensagens e simulando retry após timeout/ack perdido | M | US-22, US-23, US-26, US-32, US-43 |
+| NFR-BLK-04 | **Degradação graciosa e recuperação** | Blockchain fora do ar não impede nem altera o resultado de compra, emissão ou validação convencional; 0 eventos aceitos são perdidos e a fila pendente é drenada em até [5 min] após recuperação sob carga nominal | Teste de falha/recuperação da rede e comparação dos resultados dos fluxos principais | M | OBJ-11, US-43 |
+| NFR-BLK-05 | **Autorização e auditoria operacional** | 100% das operações de gravação são feitas por identidade autorizada; apenas responsáveis autorizados podem consultar os dados operacionais da prova; operações não autorizadas são recusadas e registradas | Testes de autorização do serviço/contrato e revisão da gestão de chaves e logs | M | US-43, NFR-SEG-05 |
+| NFR-BLK-06 | **Sem bloqueio síncrono por blockchain** | 0 chamadas à rede blockchain ou espera por finalização no caminho síncrono de checkout, emissão ou leitura/validação do QR; variação de p95 desses fluxos com a integração habilitada ≤ 5% em teste comparável | Revisão de arquitetura e teste de carga com a rede acessível e indisponível | M | OBJ-11, US-43 |
+
 ---
 
-## 12. Matriz de Rastreabilidade: Objetivos → NFRs
+## 13. Matriz de Rastreabilidade: Objetivos → NFRs
 
 | Objetivo (Visão) | NFRs |
 |---|---|
@@ -143,10 +156,11 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 | OBJ-08 Reprodutibilidade | NFR-REP-01 a 05; NFR-DIS-03 |
 | OBJ-09 Observabilidade | NFR-OBS-01 a 05 |
 | OBJ-10 Governança de código | NFR-MAN-01, 02; NFR-SEG-09 |
+| OBJ-11 Prova opcional de procedência | NFR-BLK-01 a 06 |
 
 ---
 
-## 13. Parâmetros a Definir pelo Grupo
+## 14. Parâmetros a Definir pelo Grupo
 
 | Parâmetro | Sugestão inicial | Decisão do grupo |
 |---|---|---|
@@ -158,3 +172,4 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 | Nº de tentativas antes da DLQ | 3 a 5 | |
 | Timeout do gateway | 3 s | |
 | Janela de agregação do painel | 5 s | |
+| Drenagem da fila de ancoragem após recuperação | 5 min (sob carga nominal) | |

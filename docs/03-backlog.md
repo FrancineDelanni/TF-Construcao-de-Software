@@ -55,7 +55,7 @@
 |---|---|---|---|---|---|---|---|---|
 | **R1 – MVP** | US-01 Cadastro<br>US-02 Login JWT<br>US-08 Validação JWT nos serviços | US-11 Catálogo de eventos<br>US-12 Mapa de assentos | US-09 Criar evento<br>US-10 Lotes e mapa de assentos | US-13 Reserva atômica | US-18 Criar pedido<br>US-19 Máquina de estados<br>US-21 Pagamento simulado<br>US-22 Outbox<br>US-23 Relay do Outbox | US-26 Consumo idempotente<br>US-27 PDF + QR Code | US-25 Consultar pedido | US-36 Docker Compose<br>US-37 CI/CD |
 | **R2 – Robustez** | US-03 Refresh token<br>US-04 Logout<br>US-05 RBAC<br>US-06 Organizadores | US-30 Meus ingressos | US-17 Editar/cancelar evento | US-14 Expiração em 10 min<br>US-15 Devolução em cancelamento<br>US-16 Evento de expiração | US-20 Idempotency-Key<br>US-24 Cancelar pedido | US-28 E-mail<br>US-29 Tempo real (WebSocket)<br>US-32 Retry e DLQ | US-07 Auditoria | US-38 Testcontainers<br>US-40 Observabilidade |
-| **R3 – Operação** | US-41 Gestão de contas (Admin) | US-42 Filtros e busca no catálogo | | | | | US-31 Validar QR (Operador)<br>US-33 Ingestão de eventos<br>US-34 Agregação<br>US-35 Painel em tempo real | US-39 Teste de carga |
+| **R3 – Operação** | US-41 Gestão de contas (Admin) | US-42 Filtros e busca no catálogo | | | | US-43 Prova de procedência do ingresso | US-31 Validar QR (Operador)<br>US-33 Ingestão de eventos<br>US-34 Agregação<br>US-35 Painel em tempo real | US-39 Teste de carga |
 
 > **Dica de uso:** reproduza este mapa em Miro/FigJam/GitHub Projects para uma visão gráfica (atividades no topo, histórias abaixo, faixas de release) e exporte para o PDF final.
 
@@ -118,6 +118,7 @@
 | **US-30** | Como **Cliente**, quero acessar "Meus ingressos" para baixar ou reabrir meus ingressos quando precisar. | **Dado** ingressos emitidos, **quando** acesso a área, **então** vejo a lista e posso baixar o PDF. | S | 3 | R2 |
 | **US-31** | Como **Operador**, quero validar o QR Code na entrada para impedir fraudes e reutilização de ingressos. | **Dado** um QR válido não utilizado, **quando** valido, **então** o ingresso é marcado como utilizado. **Dado** QR já utilizado, adulterado ou de outro evento, **então** a validação é recusada com motivo. | S | 5 | R3 |
 | **US-32** | Como **plataforma**, quero reprocessamento e fila de mensagens com falha (retry + DLQ) para não perder emissões em caso de erros. | **Dado** uma mensagem que falha repetidamente, **então** ela é enviada a uma Dead Letter Queue com contexto do erro e pode ser reprocessada. | S | 5 | R2 |
+| **US-43** | Como **plataforma**, quero ancorar provas dos eventos relevantes do ciclo de vida dos ingressos em blockchain para manter uma trilha de auditoria verificável. | **Dado** um evento de emissão, revogação ou validação de ingresso, **quando** a plataforma o processa, **então** a prova correspondente é ancorada e fica disponível para auditoria. **Dado** que a blockchain está indisponível, **então** a prova fica pendente para nova tentativa, sem interromper os fluxos de compra, emissão ou validação de ingressos. | C | 5 | R3 |
 
 ### Épico E5 – Telemetria e DevOps
 
@@ -153,6 +154,7 @@
 | Integração com gateway financeiro simulado | US-21 |
 | Consumo assíncrono de pagamentos confirmados (idempotente) | US-26, US-32 |
 | Ingressos em PDF com carimbo de tempo e QR Code | US-27, US-31 |
+| Prova criptográfica da integridade e procedência do histórico do ingresso | US-43 |
 | Disparo multicanal e atualização de tela em tempo real | US-28, US-29, US-30 |
 | Ingestão e agregação contínua de eventos | US-33, US-34 |
 | Painel analítico em tempo real | US-35 |
@@ -167,8 +169,8 @@
 |---|---|---|
 | **R1 – MVP** | US-01, 02, 08, 09, 10, 11, 12, 13, 18, 19, 21, 22, 23, 25, 26, 27, 36, 37 | 3+5+5+3+8+5+5+13+5+8+8+8+8+3+8+8+8+5 = **116** |
 | **R2 – Robustez** | US-03, 04, 05, 06, 07, 14, 15, 16, 17, 20, 24, 28, 29, 30, 32, 38, 40 | 5+2+5+5+5+8+3+5+5+8+3+5+5+3+5+8+5 = **85** |
-| **R3 – Operação** | US-31, 33, 34, 35, 39, 41, 42 | 5+5+8+8+8+3+3 = **40** |
-| **Total** | 42 histórias | **241** |
+| **R3 – Operação** | US-31, 33, 34, 35, 39, 41, 42, 43 (Could Have) | 5+5+8+8+8+3+3+5 = **45** |
+| **Total** | 43 histórias | **246** |
 
 > **Atenção:** o R1 está grande para um MVP. Se o tempo for curto, o grupo pode adiar US-12 (mapa visual, usando lista simples), US-37 (CI mínimo) e US-27 (PDF simples) para a segunda metade do R1, mantendo o walking skeleton: **login → reservar → pedido → pagamento simulado → Outbox → Kafka → ingresso**.
 
