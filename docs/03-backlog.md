@@ -2,7 +2,7 @@
 
 **PUCRS – Escola Politécnica | Construção de Software – 2026/2 | Projeto Integrador – Pacote 1**
 
-**Grupo:** [nome do grupo] | **Versão:** 1.0 | **Data:** 12/10/2026
+**Grupo:** [Grupo 10] | **Versão:** 1.0 | **Data:** 12/10/2026
 
 ---
 
