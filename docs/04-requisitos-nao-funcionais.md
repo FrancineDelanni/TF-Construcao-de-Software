@@ -2,13 +2,13 @@
 
 **PUCRS – Escola Politécnica | Construção de Software – 2026/2 | Projeto Integrador – Pacote 1**
 
-**Grupo:** [Grupo 10] | **Versão:** 1.0 | **Data:** 12/10/2026
+**Grupo:** [Grupo 10] | **Versão:** 1.1 | **Data:** 19/10/2026
 
 ---
 
 ## 1. Introdução
 
-Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada requisito tem um identificador, uma **métrica verificável**, o **método de verificação** e as histórias/objetivos relacionados. Valores entre colchetes **[ ]** devem ser calibrados pelo grupo conforme a capacidade do ambiente de testes.
+Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada requisito tem um identificador, uma **métrica verificável**, o **método de verificação** e as histórias/objetivos relacionados. Os números são metas técnicas iniciais para o ambiente acadêmico, não resultados medidos. Devem ser calibrados por testes com hardware, configuração e relatório registrados. As decisões arquiteturais estão no [Pacote 2](00-entrega-2.md).
 
 **Prioridade:** **M** = Must, **S** = Should, **C** = Could.
 
@@ -20,10 +20,10 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 |---|---|---|---|---|---|
 | NFR-CON-01 | **Zero overselling**: um assento nunca pode ser vendido ou reservado para mais de um cliente ao mesmo tempo | 0 duplicidades em teste com **≥ 1.000** requisições simultâneas ao mesmo assento (exatamente 1 sucesso) | Teste de integração concorrente (Testcontainers) + teste de carga | M | OBJ-01, US-13 |
 | NFR-CON-02 | Reserva de múltiplos assentos é **atômica** (tudo ou nada) | Reserva parcial: 0 ocorrências em testes | Teste de integração | M | US-13 |
-| NFR-CON-03 | **Expiração estrita** de reservas em 10 minutos | Assentos liberados entre 10:00 e 10:05 min após a reserva (tolerância [± 5 s]) | Teste de integração com relógio controlado + teste de ponta a ponta | M | OBJ-02, US-14 |
+| NFR-CON-03 | **Expiração estrita** de reservas em 10 minutos | Validade lógica termina exatamente em 10:00 min; limpeza física entre 10:00 e 10:05 min, sem liberação antecipada. Confirmar após o prazo é proibido mesmo se o worker atrasar | Teste de integração com relógio controlado + teste de ponta a ponta | M | OBJ-02, US-14 |
 | NFR-CON-04 | Devolução de assentos é **atômica** e idempotente (cancelamento ou timeout) | Devolução repetida não altera estoque além do correto | Teste unitário e de integração | M | US-14, US-15 |
 | NFR-CON-05 | Transições do pedido seguem a máquina de estados; transições inválidas são rejeitadas | 100% das transições inválidas rejeitadas | Testes unitários da máquina de estados | M | US-19 |
-| NFR-CON-06 | Expiração resiliente a falhas: reservas expiradas após reinício de serviço também são liberadas | Job de reconciliação libera reservas vencidas em até [60 s] após recuperação | Teste de integração com reinício de contêiner | S | R-09 |
+| NFR-CON-06 | Expiração resiliente a falhas: reservas expiradas após reinício de serviço também são liberadas | Job de reconciliação libera reservas vencidas em até 60 s após recuperação | Teste de integração com reinício de contêiner | S | R-09 |
 
 ## 3. Idempotência e Resiliência de Mensageria
 
@@ -32,21 +32,21 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 | NFR-IDP-01 | **Idempotency-Key** em operações de escrita do checkout | Mesma chave + mesmo corpo = mesmo resultado, 0 cobranças duplicadas; mesma chave + corpo diferente = 422 | Testes de API e de integração | M | OBJ-05, US-20 |
 | NFR-IDP-02 | **Consumidores idempotentes** | Mensagem entregue N vezes produz efeito 1 vez (0 ingressos duplicados) | Teste de integração com Kafka real reenviando mensagens | M | US-26 |
 | NFR-RES-01 | **Sem escrita dupla**: eventos são gravados via Transactional Outbox na mesma transação ACID | 0 pedidos alterados sem evento correspondente e 0 eventos sem alteração | Teste de falha (derrubar Kafka/serviço no meio do fluxo) | M | OBJ-04, US-22 |
-| NFR-RES-02 | Entrega **at-least-once** com recuperação após indisponibilidade do Kafka | Eventos pendentes publicados em até [30 s] após retorno do Kafka; 0 perdas | Teste de integração (Testcontainers pausando/retomando o broker) | M | US-23 |
+| NFR-RES-02 | Entrega **at-least-once** com recuperação após indisponibilidade do Kafka | Eventos pendentes publicados em até 30 s após retorno do Kafka; 0 perdas | Teste de integração (Testcontainers pausando/retomando o broker) | M | US-23 |
 | NFR-RES-03 | **Tolerância a falhas parciais**: falha em emissão/e-mail não afeta checkout | Checkout mantém disponibilidade com serviço de emissão indisponível | Teste de caos básico (parar contêiner) | S | US-26, US-28 |
-| NFR-RES-04 | **Retry com backoff e DLQ** para mensagens com falha | Mensagem com erro vai à DLQ após [N] tentativas, sem bloquear a partição | Teste de integração | S | US-32 |
-| NFR-RES-05 | **Timeout e circuit breaker** nas chamadas ao gateway financeiro | Timeout configurado ([3 s]); falhas repetidas abrem o circuito | Teste com gateway simulado lento/instável | S | US-21 |
-| NFR-RES-06 | **Ordenação por entidade**: eventos do mesmo pedido/assento mantêm ordem | Chave de partição = id do pedido/assento | Revisão de design + teste | S | Estrutura Kafka |
+| NFR-RES-04 | **Retry com backoff e DLQ** para mensagens com falha | Mensagem com erro vai à DLQ após a tentativa inicial e 3 retries (1, 5 e 30 s); sem bloqueio permanente da partição, com agregado problemático isolado conforme documento Kafka | Teste de integração | S | US-32 |
+| NFR-RES-05 | **Timeout e circuit breaker** nas chamadas ao gateway financeiro | Timeout configurado (3 s); falhas repetidas abrem o circuito | Teste com gateway simulado lento/instável | S | US-21 |
+| NFR-RES-06 | **Ordenação por entidade**: eventos do mesmo agregado mantêm sequência verificável | Chave de partição por reserva, pedido ou evento conforme tópico; versão local e reconciliação para fluxos entre tópicos | Revisão de design + teste | S | Estrutura Kafka |
 
 ## 4. Desempenho e Escalabilidade
 
 | ID | Requisito | Métrica / Critério | Verificação | Prior. | Relacionados |
 |---|---|---|---|---|---|
-| NFR-PER-01 | Leitura do catálogo de eventos (alta leitura) | p95 < **[200 ms]**, p99 < **[500 ms]** sob **[X] req/s** | Teste de carga (k6/Gatling) | M | OBJ-03, US-11 |
-| NFR-PER-02 | Reserva de assentos sob rajada | p95 < **[500 ms]** com **[Y] reservas/s** e 0 overselling | Teste de carga | M | US-13 |
-| NFR-PER-03 | Atraso de propagação no mapa de assentos | Disponibilidade atualizada em até **[2 s]** | Teste de integração/E2E | S | US-12 |
-| NFR-PER-04 | Latência de emissão de ingresso após pagamento | p95 < **[10 s]** do evento de pagamento ao PDF disponível | Métrica no pipeline de eventos | S | US-26, US-27 |
-| NFR-PER-05 | Uso eficiente do pool de conexões ao banco | Nenhum esgotamento do pool durante o teste de rajada; filas de espera < **[1 s]** | Teste de carga + métricas | M | Contexto do enunciado |
+| NFR-PER-01 | Leitura do catálogo de eventos (alta leitura) | p95 < **200 ms**, p99 < **500 ms** sob **500 req/s** | Teste de carga (k6/Gatling) | M | OBJ-03, US-11 |
+| NFR-PER-02 | Reserva de assentos sob rajada | p95 < **500 ms** com **100 reservas/s** e 0 overselling | Teste de carga | M | US-13 |
+| NFR-PER-03 | Atraso de propagação no mapa de assentos | Disponibilidade atualizada em até **2 s** | Teste de integração/E2E | S | US-12 |
+| NFR-PER-04 | Latência de emissão de ingresso após pagamento | p95 < **10 s** do evento de pagamento ao PDF disponível | Métrica no pipeline de eventos | S | US-26, US-27 |
+| NFR-PER-05 | Uso eficiente do pool de conexões ao banco | Nenhum esgotamento do pool durante o teste de rajada; filas de espera < **1 s** | Teste de carga + métricas | M | Contexto do enunciado |
 | NFR-ESC-01 | **Escalabilidade horizontal** de serviços sem estado | Escalar réplicas do serviço (ex.: 1 → 3) sem alteração de código e sem perda de correção | Teste com `docker compose --scale` | S | RES-01 |
 | NFR-ESC-02 | Consumidores Kafka escaláveis por partições | Consumer group com N instâncias processa em paralelo sem duplicidade de efeito | Teste de integração | S | Estrutura Kafka |
 
@@ -56,12 +56,12 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 |---|---|---|---|---|---|
 | NFR-SEG-01 | Todas as rotas (exceto públicas explícitas) exigem **JWT válido** | 100% das rotas protegidas; token inválido/expirado = 401 | Testes de API automatizados por rota | M | OBJ-06, US-08 |
 | NFR-SEG-02 | **RBAC** em todas as rotas conforme matriz de permissões | Acesso indevido = 403; matriz documentada e testada | Testes de autorização | M | US-05 |
-| NFR-SEG-03 | Tokens com **assinatura criptográfica** (algoritmo assimétrico, ex.: RS256) e curta duração | Access token ≤ **[15 min]**; refresh token com rotação e revogação | Revisão de configuração + testes | M | US-02, US-03 |
+| NFR-SEG-03 | Tokens com **assinatura criptográfica** (algoritmo assimétrico, ex.: RS256) e curta duração | Access token ≤ **15 min**; refresh token com rotação e revogação | Revisão de configuração + testes | M | US-02, US-03 |
 | NFR-SEG-04 | Refresh tokens em **armazenamento chave-valor** (Redis) com TTL e revogação | Token revogado não gera novo access token | Teste de integração | M | US-03, US-04 |
 | NFR-SEG-05 | **Auditoria** de eventos de autenticação e gestão de papéis | 100% dos logins, falhas, refresh, logout e mudanças de papel registrados, de forma imutável | Teste + revisão | S | US-07 |
 | NFR-SEG-06 | Senhas armazenadas apenas pelo provedor de identidade (hash forte); nunca em logs | 0 senhas ou tokens completos em logs | Revisão + varredura automática de logs | M | US-01 |
 | NFR-SEG-07 | **QR Code** do ingresso é assinado e não forjável | QR adulterado é rejeitado na validação | Teste unitário/integração | S | US-27, US-31 |
-| NFR-SEG-08 | Proteção contra abuso: limite de taxa (rate limiting) em rotas sensíveis | Limite por usuário/IP configurado ([N] req/min) em login e reserva | Teste de API | S | US-02, US-13 |
+| NFR-SEG-08 | Proteção contra abuso: limite de taxa (rate limiting) em rotas sensíveis | Limites iniciais por usuário/IP: 10 tentativas/min em login e 60 reservas/min; distribuição/carga de teste usa identidades e IPs compatíveis | Teste de API | S | US-02, US-13 |
 | NFR-SEG-09 | Segredos fora do repositório | 0 segredos no Git; varredura no CI | Ferramenta de secret scanning no pipeline | M | US-37 |
 | NFR-SEG-10 | Validação de entrada e proteção contra OWASP Top 10 relevantes | Entradas validadas; sem SQL injection (queries parametrizadas) | Revisão + análise estática | S | — |
 | NFR-SEG-11 | Isolamento de dados: Cliente acessa apenas seus pedidos/ingressos; Organizador apenas seus eventos | 0 acessos cruzados em teste | Testes de autorização por recurso | M | US-25, US-35 |
@@ -72,8 +72,8 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 |---|---|---|---|---|---|
 | NFR-DIS-01 | **Serviços independentes**: falha de um serviço não derruba os demais | Catálogo continua operando com Emissão e Telemetria fora do ar | Teste de caos básico | S | RES-01 |
 | NFR-DIS-02 | **Degradação graciosa** | Telemetria indisponível não impede compras; WebSocket indisponível cai para consulta periódica (polling) | Teste manual/automatizado | S | US-29, US-33 |
-| NFR-DIS-03 | **Healthchecks** em todos os contêineres | Todos os serviços expõem `/health`; Compose usa `depends_on` com condição de saúde | Verificação no Compose | M | US-36 |
-| NFR-DIS-04 | Reconexão de clientes WebSocket | Cliente reconecta e ressincroniza estado em até **[10 s]** | Teste E2E | C | US-29 |
+| NFR-DIS-03 | **Healthchecks** em todos os contêineres | APIs expõem `/health`; bancos, Redis e Kafka usam sondas próprias; Compose condiciona startup à saúde e APIs recuperam dependências em execução | Verificação no Compose | M | US-36 |
+| NFR-DIS-04 | Reconexão de clientes WebSocket | Cliente reconecta e ressincroniza estado em até **10 s** | Teste E2E | C | US-29 |
 
 ## 7. Observabilidade
 
@@ -81,7 +81,7 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 |---|---|---|---|---|---|
 | NFR-OBS-01 | **Logs estruturados** (JSON) com nível, serviço e correlation-id | 100% dos serviços; correlation-id propagado em HTTP e Kafka | Inspeção de logs | S | US-40 |
 | NFR-OBS-02 | **Métricas** técnicas por serviço (latência, taxa de erro, throughput, lag de consumidores Kafka) | Endpoint de métricas disponível | Verificação no painel | S | US-34, US-40 |
-| NFR-OBS-03 | **Painel em tempo real** de métricas de negócio | Atualização a cada **[≤ 5 s]** | Teste manual/E2E | S | OBJ-09, US-35 |
+| NFR-OBS-03 | **Painel em tempo real** de métricas de negócio | Atualização a cada **≤ 5 s** | Teste manual/E2E | S | OBJ-09, US-35 |
 | NFR-OBS-04 | UI de mensageria (Kafka) disponível no ambiente | Interface acessível no Compose para inspecionar tópicos e consumidores | Verificação no Compose | M | US-36 |
 | NFR-OBS-05 | **Tracing distribuído** (opcional) | Traço ponta a ponta de uma compra | Demonstração | C | — |
 
@@ -116,7 +116,7 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 | NFR-USA-01 | **Contador visível** da expiração da reserva (10 min) | Exibido em todas as telas do fluxo de reserva/checkout, sincronizado com o horário do servidor | Teste E2E / revisão de UI | M | US-13, US-14 |
 | NFR-USA-02 | Interface **responsiva** (desktop e celular) | Layout funcional em larguras de 360 px a 1920 px | Teste manual | S | — |
 | NFR-USA-03 | Mensagens de erro claras para falhas esperadas (assento indisponível, reserva expirada, pagamento recusado) | Todas as falhas do fluxo têm mensagem e ação sugerida | Revisão de UI | S | US-13, US-21 |
-| NFR-USA-04 | Acessibilidade básica (contraste, navegação por teclado, rótulos) | Atende nível **[WCAG 2.1 AA]** nas telas principais | Auditoria (ex.: Lighthouse/axe) | C | — |
+| NFR-USA-04 | Acessibilidade básica (contraste, navegação por teclado, rótulos) | Atende nível **WCAG 2.1 AA** nas telas principais | Auditoria (ex.: Lighthouse/axe) | C | — |
 | NFR-USA-05 | Feedback imediato durante filas de pico (estado "processando") | Usuário sempre vê estado de carregamento; sem tela em branco | Teste manual | S | US-29 |
 
 ## 11. Conformidade e Dados
@@ -125,7 +125,7 @@ Os requisitos não-funcionais definem **como bem** o PulsePass deve operar. Cada
 |---|---|---|---|---|---|
 | NFR-LGP-01 | Minimização de dados pessoais (alinhado à LGPD) | Apenas dados necessários (nome, e-mail); sem dados reais de pagamento armazenados | Revisão de modelo de dados | S | — |
 | NFR-LGP-02 | Dados de teste fictícios | 0 dados reais em repositório e ambientes de demonstração | Revisão | M | Processo com IA |
-| NFR-LGP-03 | Retenção de logs e auditoria definida | Política de retenção documentada ([90 dias]) | Revisão | C | US-07 |
+| NFR-LGP-03 | Retenção de logs e auditoria definida | Política de retenção documentada (90 dias) | Revisão | C | US-07 |
 
 ## 12. Prova de procedência em blockchain (Could Have)
 
@@ -136,7 +136,7 @@ Estes requisitos aplicam-se somente se o grupo priorizar a US-43 na R3. A blockc
 | NFR-BLK-01 | **Minimização e privacidade on-chain** | 0 dados pessoais, conteúdo do ingresso, QR/PDF, número de pedido ou identificador de assento em transações, eventos ou estado do contrato | Inspeção do contrato e testes dos payloads publicados | M | US-43, NFR-LGP-01 |
 | NFR-BLK-02 | **Integridade verificável** | 100% dos registros de prova válidos conferem com o compromisso on-chain; qualquer alteração nos dados apresentados é detectada e reportada como não correspondente | Testes unitários com vetores válidos e dados adulterados; teste de integração com a rede selecionada | M | OBJ-11, US-43 |
 | NFR-BLK-03 | **Idempotência da ancoragem** | Reentregar N vezes o mesmo evento de domínio produz exatamente um compromisso lógico para aquele evento | Teste de integração reprocessando mensagens e simulando retry após timeout/ack perdido | M | US-22, US-23, US-26, US-32, US-43 |
-| NFR-BLK-04 | **Degradação graciosa e recuperação** | Blockchain fora do ar não impede nem altera o resultado de compra, emissão ou validação convencional; 0 eventos aceitos são perdidos e a fila pendente é drenada em até [5 min] após recuperação sob carga nominal | Teste de falha/recuperação da rede e comparação dos resultados dos fluxos principais | M | OBJ-11, US-43 |
+| NFR-BLK-04 | **Degradação graciosa e recuperação** | Blockchain fora do ar não impede nem altera o resultado de compra, emissão ou validação convencional; 0 eventos aceitos são perdidos e a fila pendente é drenada em até 5 min após recuperação sob carga nominal | Teste de falha/recuperação da rede e comparação dos resultados dos fluxos principais | M | OBJ-11, US-43 |
 | NFR-BLK-05 | **Autorização e auditoria operacional** | 100% das operações de gravação são feitas por identidade autorizada; apenas responsáveis autorizados podem consultar os dados operacionais da prova; operações não autorizadas são recusadas e registradas | Testes de autorização do serviço/contrato e revisão da gestão de chaves e logs | M | US-43, NFR-SEG-05 |
 | NFR-BLK-06 | **Sem bloqueio síncrono por blockchain** | 0 chamadas à rede blockchain ou espera por finalização no caminho síncrono de checkout, emissão ou leitura/validação do QR; variação de p95 desses fluxos com a integração habilitada ≤ 5% em teste comparável | Revisão de arquitetura e teste de carga com a rede acessível e indisponível | M | OBJ-11, US-43 |
 
@@ -160,16 +160,23 @@ Estes requisitos aplicam-se somente se o grupo priorizar a US-43 na R3. A blockc
 
 ---
 
-## 14. Parâmetros a Definir pelo Grupo
+## 14. Parâmetros iniciais e futura calibração
 
-| Parâmetro | Sugestão inicial | Decisão do grupo |
+Os valores abaixo são decisões técnicas iniciais da proposta. A aprovação do grupo e a medição posterior podem alterá-los por PR com justificativa; nenhum benchmark foi executado nesta preparação.
+
+| Parâmetro | Valor inicial | Como validar |
 |---|---|---|
-| [X] req/s de leitura do catálogo | 500 a 2.000 req/s (ambiente local) | |
-| [Y] reservas/s | 100 a 500 reservas/s | |
-| p95 do catálogo | 200 ms | |
-| Tolerância de expiração | ± 5 s | |
-| Duração do access token | 15 min | |
-| Nº de tentativas antes da DLQ | 3 a 5 | |
-| Timeout do gateway | 3 s | |
-| Janela de agregação do painel | 5 s | |
-| Drenagem da fila de ancoragem após recuperação | 5 min (sob carga nominal) | |
+| Leituras do catálogo | 500 req/s | Teste de carga com hardware registrado |
+| Reservas | 100 reservas/s | Carga distribuída e zero overselling |
+| p95 / p99 do catálogo | < 200 ms / < 500 ms | Relatório de carga |
+| p95 de reserva | < 500 ms | Relatório de carga |
+| Expiração | Validade exata em 10 min; limpeza até +5 s | Relógio controlado e integração |
+| Recuperação de reservas vencidas | Até 60 s após banco/serviço recuperado | Reinício de dependências |
+| Access token | Até 15 min | Configuração Keycloak e teste |
+| Sessão de renovação | Até 8 h, respeitando validade do provedor | Redis TTL e teste de logout/rotação |
+| Idempotência HTTP | Resposta retida por 24 h; unicidades de negócio persistem | Retry e expiração da chave |
+| Retry Kafka | Inicial + 3 retries, intervalos 1/5/30 s | Falha induzida e DLQ |
+| Timeout do gateway | 3 s; resultado pendente é reconciliado | Gateway lento |
+| Limites de abuso | Login 10/min; reserva 60/min por usuário/IP | Teste de API |
+| Janela de agregação / atualização do painel | 5 s / até 5 s | Eventos com timestamp e comparação |
+| Drenagem da fila blockchain opcional | 5 min sob carga nominal | Falha/recuperação se US-43 for priorizada |

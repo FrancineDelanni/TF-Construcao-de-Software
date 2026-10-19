@@ -4,7 +4,7 @@
 
 **Grupo:** [Grupo 10] | **Integrantes:** [João Vitor Krampe], [Leticia Nunes], [Francine Delanni], [Luis Eduardo Trein], [Enzo Picoli]
 
-**Versão:** 1.0 | **Data:** 13/10/2026 | **Status:** Rascunho para revisão do grupo
+**Versão:** 1.1 | **Data:** 19/10/2026 | **Status:** descrição alinhada ao Pacote 2; HTML visual original preservado
 
 ---
 
@@ -22,7 +22,7 @@ Este documento mostra **como o front-end do PulsePass vai ser** antes de program
 | T06 Status do pedido | Botão "Simular confirmação" mostra o pedido passando de Aguardando para Pago |
 | T14 Validar ingresso | Alternar o resultado da leitura: válido, já utilizado ou adulterado |
 
-**Entrega.** Exportar cada tela do canvas (PNG ou PDF) para `/docs/05-mockups/` com os nomes da coluna "Arquivo" da seção 3, e anexar o PDF ao documento final do Pacote 1. [Anexar: exportação do canvas]
+**Artefato local.** A exportação visual está no [HTML dos 17 mockups](<PulsePass – Mockups e Mapa de Navegação.html>). Os nomes da coluna "Arquivo" são referências de tela, não arquivos PNG já existentes. Se o Moodle exigir PDF/imagens, exportar esse material e conferir legibilidade antes de anexar. O acesso externo ao canvas não foi validado nesta preparação.
 
 ---
 
@@ -153,31 +153,32 @@ Mostra a mesma jornada do comprador do Documento de Visão (seção 5.3), com a 
 ```mermaid
 flowchart TD
     A["T03 Catálogo"] -->|"Ver assentos"| B["T04 Mapa de assentos"]
-    B -->|"Reservar assentos<br/>Criado → Reservado<br/>inicia o contador de 10 min"| C["T05 Checkout"]
+    B -->|"Reservar assentos e vincular pedido<br/>inicia prazo no Inventory"| C["T05 Checkout"]
     B -->|"Assento já reservado por outra pessoa"| E1["T07 Assento indisponível (409)"]
     E1 -->|"Escolher outros assentos"| B
-    C -->|"Pagar, com Idempotency-Key<br/>Reservado → Aguardando"| D["T06 Aguardando confirmação"]
+    C -->|"Pagar, com Idempotency-Key<br/>Reservado → Aguardando; resposta 202"| D["T06 Aguardando confirmação"]
     C -->|"Cancelar reserva"| A
     C -->|"10 min sem pagamento<br/>Reservado → Expirado"| E2["T07 Reserva expirada (410)"]
-    D -->|"Gateway aprova<br/>Aguardando → Pago"| F["T06 Pagamento confirmado"]
-    D -->|"10 min sem confirmação<br/>Aguardando → Expirado"| E2
-    D -->|"Gateway recusa"| E3["T07 Pagamento recusado"]
+    D -->|"Gateway autoriza e Inventory confirma<br/>Aguardando → Pago"| F["T06 Pagamento confirmado"]
+    D -->|"Inventory confirma expiração<br/>Aguardando → Expirado"| E2
+    D -->|"Gateway recusa definitivamente<br/>Aguardando → Reservado se ainda válido"| E3["T07 Pagamento recusado"]
     E3 -->|"Tentar novamente"| C
     E3 -->|"Cancelar reserva"| A
     E2 -->|"Refazer a seleção"| B
-    F -->|"Ver meus ingressos"| G["T09 Meus ingressos"]
+    F -->|"Baixar PDF no R1"| PDF["Download autenticado pela T06"]
+    F -->|"Ver meus ingressos no R2"| G["T09 Meus ingressos"]
 ```
 
 ### 4.3 Estado do pedido e o que a pessoa vê
 
 | Estado | Onde aparece | Contador de 10 min | Ações na tela |
 |---|---|---|---|
-| **Criado** | Transitório, entre T04 e T05 | Começa aqui | (nenhuma) |
+| **Criado** | Transitório, durante vínculo do pedido na T05 | Já iniciado na reserva do Inventory | Aguardar vinculação |
 | **Reservado** | T05, T08 | Sim | Pagar, Cancelar reserva, Alterar assentos |
 | **Aguardando** | T06, T08 | Sim | Acompanhar, Cancelar pedido |
 | **Pago** | T06 (confirmado), T08, T09 | Não | Ver meus ingressos, Baixar PDF |
 | **Expirado** | T07 (reserva expirada), T08 | Não | Refazer a seleção |
-| **Cancelado** (a decidir, ver seção 8) | T08 | Não | (nenhuma) |
+| **Cancelado** | T08 | Não | (nenhuma) |
 
 ---
 
@@ -219,7 +220,7 @@ flowchart TD
 **T06 · Status do pedido** (US-21, US-29, US-27, US-28)
 - Linha do tempo Criado → Reservado → Aguardando → Pago, com horários.
 - Em **Aguardando**: contador, barra de progresso e indicação "Conectado em tempo real". Se a conexão cair, a tela reconecta e sincroniza (NFR-DIS-04); sem WebSocket, cai para consulta periódica (NFR-DIS-02). Nunca fica em branco (NFR-USA-05).
-- Em **Pago**: faixa verde de confirmação, ingressos prontos, aviso de cópia por e-mail e botão "Ver meus ingressos".
+- Em **Pago**: confirmação da compra; enquanto o PDF é gerado, mostrar emissão em andamento. Desde R1, botão "Baixar PDF" na T06 quando disponível. Área "Meus ingressos" e aviso de e-mail efetivamente enviado entram conforme R2; não anunciar envio antes da confirmação.
 
 **T07 · Estados de erro** (NFR-USA-03)
 Quatro situações esperadas, cada uma com título, explicação e próxima ação:
@@ -227,7 +228,7 @@ Quatro situações esperadas, cada uma com título, explicação e próxima aç�
 | Situação | Mensagem principal | Ações |
 |---|---|---|
 | Assento indisponível (409) | Os assentos acabaram de ser reservados; nada foi bloqueado | Escolher outros assentos · Voltar aos eventos |
-| Reserva expirada (410) | O prazo terminou, os assentos voltaram à venda e não houve cobrança | Refazer a seleção · Ver meus pedidos |
+| Reserva expirada (410) | A reserva venceu; confirmação financeira simulada não concluiu a compra. O estado vem do servidor | Refazer a seleção · Ver meus pedidos |
 | Pagamento recusado | Seus assentos continuam reservados pelo tempo restante | Tentar novamente · Cancelar reserva |
 | Limite de tentativas (429) | Aguarde antes de tentar de novo | Tentar de novo em N s (desativado) · Voltar ao login |
 
@@ -253,7 +254,7 @@ Quatro situações esperadas, cada uma com título, explicação e próxima aç�
 
 **T12 · Lotes e mapa de assentos** (US-10)
 - Tabela de setores (nome, fileiras, assentos por fileira, preço) com a capacidade calculada.
-- Mostra o erro de validação de assento duplicado: o setor "Camarote" repete as fileiras A e B da "Pista Premium". Enquanto houver conflito, "Salvar mapa" fica desativado.
+- Deve mostrar erro quando a mesma posição é duplicada dentro do mesmo setor. Repetir fileira A/B em setores distintos é permitido; o exemplo visual exportado precisa dessa adaptação na implementação. Enquanto houver conflito real, "Salvar mapa" fica desativado.
 - Pré-visualização do mapa, com todos os assentos Livres.
 
 ### Painel, Operador e Admin
@@ -351,17 +352,22 @@ Todo chip traz o nome do estado em texto, então a cor nunca é a única pista (
 
 ---
 
-## 8. Pontos em aberto para o grupo decidir
+## 8. Decisões de alinhamento com o Pacote 2
 
-Ao desenhar as telas apareceram inconsistências entre os documentos. Cada uma precisa de uma decisão antes do Pacote 2.
+As regras abaixo compõem a proposta do Pacote 2 e substituem as ambiguidades da versão inicial. O HTML exportado continua como referência visual original; adaptações funcionais deverão ser realizadas ao implementar a SPA.
 
-| # | Ponto | Onde aparece | Sugestão |
-|---|---|---|---|
-| 1 | **Estado "Cancelado".** US-15 e US-24 falam em pedido cancelado, mas a máquina de estados (Visão 5.3, US-19 e o exemplo de `CLAUDE.md` em `01-processo-desenvolvimento.md`, seção 6.2) tem só Criado, Reservado, Aguardando, Pago e Expirado. | T08 mostra o chip "Cancelado" | Incluir o estado Cancelado na máquina e nos testes, ou tratar o cancelamento como Expirado |
-| 2 | **Nova tentativa após recusa.** A Visão só permite Aguardando → Expirado. A T07 oferece "Tentar novamente" mantendo a reserva, o que exige a transição Aguardando → Reservado. A US-21 admite "nova tentativa ou Expirado". | T07, diagrama 4.2 | Decidir uma regra: recusa volta a Reservado (nova transição) ou leva direto a Expirado |
-| 3 | **Download do PDF no R1.** A US-27 (PDF com QR Code) é R1, mas a US-30 (Meus ingressos) é R2, então o MVP não teria onde baixar o ingresso. | T06, T09 | Puxar a US-30 para o R1 ou pôr o botão de download direto na T06 |
-| 4 | **Consulta do Operador.** A Visão (4.1) diz que o Operador consulta pedidos e ingressos, mas nenhuma história cobre isso. | Campo "Consultar por código" na T14 | Criar uma US adicional (próximo ID livre do backlog) ou tirar o campo |
-| 5 | **Telas de sessão e acesso.** Não há mockup para "Acesso negado" (403) nem "Sessão expirada" (401). | US-03, US-05 | Redirecionar para a página inicial do papel (403) e para a T01 (401), com mensagem curta |
+| Ponto | Decisão documentada | Impacto nas telas |
+|---|---|---|
+| Estado Cancelado | Estado adicional para desistência aceita pelo Inventory, sem apagar histórico | T08 mostra Cancelado somente após confirmação do servidor |
+| Recusa e timeout | Recusa definitiva permite nova tentativa no prazo restante; timeout mantém tentativa pendente e exige reconciliação | T07 oferece retry apenas na recusa definitiva; T06 mantém processamento em timeout |
+| Download no R1 | US-27 inclui download pela T06; T09 continua R2 | Mostrar emissão pendente e depois botão de PDF na T06 |
+| Consulta do Operador | US-31 inclui consulta por código e estado do pedido associado, com vínculo ao evento | T14 expõe apenas dados operacionais necessários |
+| Sessão e acesso | 401 leva à autenticação; 403 informa acesso negado e oferece voltar ao início do papel | Não perder silenciosamente o contexto; autorização é do backend |
+| Login OIDC | T01/T02 são referências a adaptar ao tema/fluxo hospedado do Keycloak | SPA não coleta senha para emitir token por conta própria |
+| Operações assíncronas | Pagamento/cancelamento podem retornar 202; relógio zerado não determina sozinho estado final | T06 consulta servidor e mostra processamento/reconexão |
+| Identidade do assento | Duplicidade é repetir evento + setor + fileira + número, não repetir A/B em setores diferentes | O exemplo visual antigo de erro da T12 deve ser adaptado para colisão dentro do mesmo setor |
+
+Referência detalhada: [Arquitetura C4](../docs/06-arquitetura-c4.md), seções 5 e 6.
 
 ---
 

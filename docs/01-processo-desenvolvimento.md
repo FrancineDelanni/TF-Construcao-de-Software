@@ -5,7 +5,7 @@
 **Grupo:** [Grupo 10] | **Integrantes:** [João Vitor Krampe], [Leticia Nunes], [Francine Delanni], [Luis Eduardo Trein], [Enzo Picoli]
 
 
-**Versão:** 1.0 | **Data:** 12/10/2026 | **Status:** Rascunho para revisão do grupo
+**Versão:** 1.1 | **Data:** 19/10/2026 | **Status:** alinhado ao Pacote 2; revisão do grupo pendente
 
 ---
 
@@ -86,8 +86,8 @@ No SDD, a **especificação é o artefato central**; o código é derivado dela.
 | 2. Requisitos | Histórias + critérios de aceite, NFRs | `/docs/03-backlog`, `/docs/04-nfr` | Grupo (PO da sprint) | Sugere critérios de borda, ambiguidades e casos de erro |
 | 3. Contratos | OpenAPI (REST), AsyncAPI/JSON Schema (eventos Kafka) | `/specs/api`, `/specs/events` | Responsável da frente | Gera rascunho do contrato; humano valida |
 | 4. Spec técnica da história | Arquivo `spec.md` por história (design, estados, SQL, tópicos, testes) | `/specs/stories/US-XX.md` | Autor da história | Gera rascunho a partir das camadas 1 a 3 |
-| 5. Testes | Casos derivados dos critérios de aceite | `/src/**/test` | Autor + IA | Gera testes antes da implementação |
-| 6. Código | Implementação | `/src` | IA assistida + autor | Implementa contra spec e testes |
+| 5. Testes | Casos derivados dos critérios de aceite | `/backend/*/src/test` e `/frontend/src` | Autor + IA | Gera testes antes da implementação |
+| 6. Código | Implementação | `/backend/*/src/main` e `/frontend/src` | IA assistida + autor | Implementa contra spec e testes |
 
 ### 3.1 Template de spec técnica por história
 
@@ -126,7 +126,7 @@ No SDD, a **especificação é o artefato central**; o código é derivado dela.
 
 > **Entrada para a IA:** critérios de aceite da US-13, NFR-CON-01 (zero overselling), contrato `POST /events/{id}/reservations`, e a restrição "bloqueio via lock concorrente + devolução por TTL de 10 min".
 >
-> **Saída esperada (revisada por humano):** spec com a estratégia de alocação (ex.: `SET seat:{event}:{seat} {reservationId} NX EX 600` no Redis combinado a `UNIQUE (event_id, seat_id)` ativo no PostgreSQL), o fluxo de erro 409 para assento já reservado, evento `seat.reservation.created` / `seat.reservation.expired` e testes de concorrência (N threads disputando o mesmo assento → exatamente 1 sucesso).
+> **Saída esperada para revisão humana:** spec com transação e locks de linha no PostgreSQL do Inventory, prazo persistido de dez minutos, resposta 409 para disputa de assento, outbox de `reservation.created` / `reservation.expired` e testes de concorrência (N threads disputando o mesmo assento → exatamente um sucesso). Redis é cache/apoio, não a autoridade da reserva; decisão detalhada no [C4](06-arquitetura-c4.md).
 >
 > **Validação:** teste de integração com Testcontainers (Redis + PostgreSQL) executando 200 a 1.000 requisições simultâneas. O PR só é aprovado se o teste passar de forma estável.
 
@@ -188,7 +188,9 @@ Para organizar o uso, o grupo define "agentes" como **papéis com instruções f
 
 ## 6. Arquivos de Contexto e Prompts Reutilizáveis
 
-### 6.1 Estrutura no repositório
+### 6.1 Estrutura planejada para implementação
+
+Os caminhos de código, contratos e workflows abaixo são planejados. Na preparação do Pacote 2 foram criados os documentos 06–10; exemplos de agentes/prompts não equivalem a arquivos já implementados.
 
 ```text
 /
@@ -216,15 +218,15 @@ Plataforma de bilhetagem para megaeventos. Prioridades: zero overselling,
 reserva com expiração de 10 minutos, checkout idempotente, emissão segura.
 
 ## Arquitetura
-Microsserviços: iam (Keycloak/Cognito), inventory, orders, ticketing, analytics.
-Dados: PostgreSQL (por serviço), Redis (locks, refresh tokens, cache), Kafka (eventos).
+Microsserviços: iam (integrado ao Keycloak), inventory, orders, delivery, analytics.
+Dados: PostgreSQL (por serviço), Redis (refresh tokens cifrados e cache; locks de assento no PostgreSQL), Kafka (eventos).
 
 ## Regras obrigatórias
 - Nunca publicar no Kafka diretamente dentro de um caso de uso: usar Transactional Outbox.
 - Todo consumidor Kafka deve ser idempotente (tabela de eventos processados).
 - Endpoints de escrita de checkout exigem cabeçalho Idempotency-Key.
-- Todas as rotas exigem JWT válido e checagem de papel (RBAC).
-- Máquina de estados do pedido: Criado → Reservado → Aguardando → Pago | Expirado.
+- Todas as rotas de negócio exigem JWT válido, RBAC e checagem de proprietário; autenticação e saúde têm exceções explícitas.
+- Estados: Criado, Reservado, Aguardando, Pago, Expirado e Cancelado. Pago exige confirmação do Inventory; recusa definitiva permite Aguardando → Reservado enquanto há prazo.
 - Sem segredos no código; usar variáveis de ambiente.
 
 ## Processo
@@ -259,7 +261,7 @@ vazamento de dados e testes insuficientes. Liste por severidade.
 
 ## 7. Gerenciamento da Configuração e IA (resumo)
 
-O detalhamento do processo de GCS será entregue no Pacote 2. Resumo das regras que envolvem IA:
+O detalhamento está no [Processo de GCS](10-processo-gcs.md) e na [Pipeline](09-pipeline-desenvolvimento.md) do Pacote 2. São regras propostas; implementação e configuração remota devem ser comprovadas quando realizadas. Resumo das regras que envolvem IA:
 
 - Branches: `main` (releases), `develop` (integração), `feature/US-XX-descricao`.
 - Commits que contenham código gerado por IA podem receber o trailer `Assisted-by: <ferramenta>` (opcional, mas recomendado).
@@ -290,6 +292,8 @@ O detalhamento do processo de GCS será entregue no Pacote 2. Resumo das regras 
 |---|---|---|---|---|---|---|
 | 12/10/2026 | [nome] | Claude | Rascunho do Documento de Visão | Link/arquivo em `/ai/log/2026-10-12-visao.md` | Rascunho v1.0 | Metas numéricas ajustadas pelo grupo |
 | | | | | | | |
+
+A tabela acima é exemplo não preenchido e não comprova execução. Revisão coletiva continua pendente.
 
 **Métricas de acompanhamento (opcional):** nº de PRs com apoio de IA, retrabalho após revisão, bugs encontrados em código gerado, tempo economizado estimado.
 

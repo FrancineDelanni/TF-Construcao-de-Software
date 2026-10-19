@@ -6,7 +6,7 @@
 
 **Grupo:** [Grupo 10] | **Integrantes:** [João Vitor Krampe], [Leticia Nunes], [Francine Delanni], [Luis Eduardo Trein], [Enzo Picoli]
 
-**Versão:** 1.0 | **Data:** 12/10/2026 | **Status:** Rascunho para revisão do grupo
+**Versão:** 1.1 | **Data:** 19/10/2026 | **Status:** alinhado à proposta do Pacote 2; revisão do grupo pendente
 
 ---
 
@@ -18,7 +18,7 @@ Este documento descreve a visão de alto nível do **PulsePass**: o problema que
 
 ### 1.2 Sobre o nome
 
-"PulsePass" é o nome de trabalho sugerido no enunciado. A metáfora do *pulso* remete ao pico de tráfego na abertura de vendas e o *pass* ao ingresso e ao acesso ao evento. Alternativas para votação do grupo: **TicketRush**, **GateFlow**, **Arena Pass**, **Rajada**. Caso o grupo escolha outro nome, basta substituí-lo neste documento.
+O projeto utiliza o nome **PulsePass**, sugerido no enunciado. A metáfora do *pulso* remete ao pico de tráfego na abertura de vendas e o *pass* ao ingresso e ao acesso ao evento.
 
 ### 1.3 Referências
 
@@ -84,7 +84,7 @@ Sistemas de bilhetagem construídos de forma puramente síncrona (requisição H
 
 | Sistema | Papel |
 |---|---|
-| Provedor de identidade (Keycloak ou Cognito) | Autenticação e emissão de tokens |
+| Provedor de identidade (Keycloak) | Autenticação e emissão de tokens |
 | Gateway financeiro (simulado) | Processamento de pagamentos |
 | Serviço de envio de e-mail (simulado ou real) | Disparo de comprovantes e ingressos |
 
@@ -102,7 +102,7 @@ O PulsePass é uma plataforma composta por **microsserviços autônomos**, uma S
 |---|---|---|---|
 | 1 | **Identidade e Governança (IAM)** | Segurança transversal | Autenticação stateless via JWT; refresh tokens em armazenamento chave-valor; RBAC com quatro papéis; auditoria de credenciais; gestão cadastral de organizadores |
 | 2 | **Inventário e Concorrência** | Catálogo e assentos | Criação de lotes e mapas de assentos; catálogo de alta leitura; alocação atômica de assentos; devolução atômica em cancelamento ou timeout; publicação de eventos de expiração |
-| 3 | **Transações e Checkout** | Pedidos e pagamentos | Máquina de estados do pedido (Criado, Reservado, Aguardando, Pago, Expirado); Idempotency-Key; Transactional Outbox; integração com gateway simulado |
+| 3 | **Transações e Checkout** | Pedidos e pagamentos | Máquina de estados do pedido (Criado, Reservado, Aguardando, Pago, Expirado e Cancelado); Idempotency-Key; Transactional Outbox; integração com gateway simulado |
 | 4 | **Mensageria e Despacho** | Emissão e notificações | Consumo assíncrono de pagamentos confirmados; PDF com carimbo de tempo e QR Code; envio multicanal; atualização de tela em tempo real via WebSocket |
 | 5 | **Análise e Operações** | Telemetria e DevOps | Ingestão e agregação contínua de eventos; painel de métricas em tempo real; CI/CD automatizada; ambiente via Docker Compose |
 
@@ -111,21 +111,26 @@ O PulsePass é uma plataforma composta por **microsserviços autônomos**, uma S
 1. O cliente se autentica e navega pelo catálogo de eventos.
 2. Escolhe assentos no mapa; o sistema os bloqueia atomicamente e inicia um relógio de **10 minutos**.
 3. O pedido passa a *Reservado* e o cliente segue para o checkout (com Idempotency-Key).
-4. O pedido fica *Aguardando* a resposta do gateway; ao confirmar, passa a *Pago*. Se o prazo vence, passa a *Expirado* e os assentos voltam ao estoque.
-5. O evento de pagamento confirmado é gravado via Outbox e publicado no Kafka.
+4. O pedido fica *Aguardando* a resposta do gateway simulado. Após autorização fictícia, Inventory confirma os assentos sob lock e dentro do prazo; somente esse resultado permite passar a *Pago*. Se Inventory expira/cancela antes da confirmação, o pedido converge para *Expirado*/*Cancelado*. Recusa definitiva permite tentar novamente no tempo restante; timeout exige reconciliar a mesma tentativa.
+5. O estado Pago e seu evento são gravados na mesma transação via Outbox e publicados no Kafka. A confirmação prévia do Inventory também é propagada por outbox; detalhes no [C4](06-arquitetura-c4.md).
 6. O serviço de emissão consome o evento (de forma idempotente), gera o PDF com QR Code e notifica o cliente por e-mail e em tempo real na tela.
 7. No dia do evento, o operador valida o QR Code na entrada.
 
 ```mermaid
 stateDiagram-v2
     [*] --> Criado
-    Criado --> Reservado: assentos bloqueados (lock atômico)
+    Criado --> Reservado: reserva válida vinculada ao pedido
     Reservado --> Aguardando: checkout iniciado (Idempotency-Key)
-    Reservado --> Expirado: 10 min sem pagamento
-    Aguardando --> Pago: gateway confirma
-    Aguardando --> Expirado: 10 min / pagamento recusado
+    Reservado --> Expirado: Inventory expira a reserva
+    Criado --> Expirado: reserva venceu antes do vínculo
+    Aguardando --> Reservado: recusa definitiva e prazo restante
+    Aguardando --> Pago: Inventory confirma dentro do prazo
+    Aguardando --> Expirado: Inventory expira
+    Reservado --> Cancelado: Inventory cancela
+    Aguardando --> Cancelado: Inventory cancela
     Pago --> [*]
     Expirado --> [*]
+    Cancelado --> [*]
 ```
 
 ---
@@ -135,18 +140,18 @@ stateDiagram-v2
 | ID | Objetivo | Meta / Critério de verificação |
 |---|---|---|
 | OBJ-01 | Eliminar sobre-venda | **0** assentos vendidos em duplicidade em teste de concorrência (ex.: 1.000 requisições simultâneas disputando o mesmo assento resultam em exatamente 1 reserva) |
-| OBJ-02 | Expiração estrita de reservas | Reservas não pagas expiram em **10 minutos** e os assentos são devolvidos ao estoque atomicamente (tolerância a definir, ex.: ± 5 s) |
-| OBJ-03 | Resiliência a picos | Suportar a rajada de abertura de vendas com meta inicial de **[X] req/s** de leitura de catálogo e **[Y] reservas/s**, verificada por teste de carga |
+| OBJ-02 | Expiração estrita de reservas | Reservas não pagas expiram em **10 minutos** e os assentos são devolvidos ao estoque atomicamente (validade lógica estrita; limpeza em até 5 s após vencer, sem liberação antecipada) |
+| OBJ-03 | Resiliência a picos | Suportar a rajada de abertura de vendas com meta inicial de **500 req/s** de leitura de catálogo e **100 reservas/s**, verificada por teste de carga |
 | OBJ-04 | Evitar escrita dupla | **100%** dos eventos de domínio de pedidos publicados via Transactional Outbox, sem perda mesmo com indisponibilidade temporária do Kafka |
 | OBJ-05 | Idempotência | Reenvio de uma mesma Idempotency-Key não cria pedido ou cobrança duplicada; consumidores tratam mensagens repetidas sem efeito colateral duplicado |
-| OBJ-06 | Segurança | Todas as rotas protegidas por JWT assinado e por RBAC; credenciais e eventos sensíveis auditados |
+| OBJ-06 | Segurança | Todas as rotas de negócio protegidas por JWT assinado e por RBAC, com exceções públicas explícitas de autenticação e saúde; credenciais e eventos sensíveis auditados |
 | OBJ-07 | Qualidade | Cobertura de testes unitários **≥ 70%** do domínio (máquinas de estado); testes de integração com Testcontainers (PostgreSQL, Kafka, Redis) |
 | OBJ-08 | Reprodutibilidade | Ambiente completo sobe com um único `docker compose up` (backend, frontend, bancos, Kafka e UI de mensageria) |
 | OBJ-09 | Observabilidade | Painel exibindo métricas de navegação e compras em tempo real |
 | OBJ-10 | Governança de código | Pipeline de CI executa linters, testes e build a cada Pull Request e merge na branch `develop` |
 | OBJ-11 | (Opcional, R3) Prova de procedência de ingressos | Para os eventos incluídos na feature, um verificador confirma que os registros apresentados correspondem aos compromissos criptográficos ancorados, sem que falhas da blockchain afetem o fluxo principal |
 
-> Os valores **[X]**, **[Y]** e **[Z]** devem ser definidos pelo grupo após estimar a capacidade do ambiente de teste.
+> Metas iniciais de teste para o ambiente acadêmico: 500 leituras/s, 100 reservas/s e p95 de catálogo < 200 ms. São objetivos propostos, ainda sem medição; ajustes devem registrar hardware e resultado nos NFRs.
 
 ---
 
@@ -188,7 +193,7 @@ stateDiagram-v2
 | ID | Restrição |
 |---|---|
 | RES-01 | Estilo arquitetural baseado em **microsserviços** |
-| RES-02 | Provedor de identidade externo: **Keycloak ou Cognito** |
+| RES-02 | Provedor de identidade externo: **Keycloak** |
 | RES-03 | **Kafka** como plataforma de streaming de eventos |
 | RES-04 | Tratamento explícito de **Dual-Write** (Outbox) e **idempotência no consumo** |
 | RES-05 | Bancos relacionais (PostgreSQL) e chave-valor (Redis) |
@@ -211,7 +216,7 @@ stateDiagram-v2
 
 | ID | Risco | Prob. | Impacto | Mitigação |
 |---|---|---|---|---|
-| R-01 | Sobre-venda por condição de corrida na alocação de assentos | Média | Alto | Operações atômicas (locks no Redis e/ou restrições e transações no PostgreSQL); testes de concorrência automatizados |
+| R-01 | Sobre-venda por condição de corrida na alocação de assentos | Média | Alto | Locks e transações no PostgreSQL proprietário do Inventory; Redis não decide disponibilidade; testes de concorrência automatizados |
 | R-02 | Escrita dupla entre banco e Kafka | Alta | Alto | Transactional Outbox com worker de publicação e testes de falha com Testcontainers |
 | R-03 | Processamento duplicado de mensagens | Alta | Médio | Consumidores idempotentes (tabela de eventos processados / chave de deduplicação) |
 | R-04 | Contenção de locks em picos de abertura | Média | Alto | Reservas curtas com TTL, particionamento por evento, teste de carga |
@@ -219,7 +224,7 @@ stateDiagram-v2
 | R-06 | Estouro de prazo por escopo amplo | Alta | Alto | Story Mapping com MVP (walking skeleton), priorização MoSCoW, entregas incrementais |
 | R-07 | Código gerado por IA com erros ou inconsistências | Média | Médio | Revisão humana obrigatória, specs claras, testes automatizados e *code review* |
 | R-08 | Divergência entre documentação e código | Média | Médio | Atualização da documentação a cada pacote; ADRs; revisão cruzada |
-| R-09 | Expiração de reserva falhar (timer perdido) | Média | Alto | Expiração garantida por TTL e por job de reconciliação; evento de expiração publicado no broker |
+| R-09 | Expiração de reserva falhar (timer perdido) | Média | Alto | Prazo persistido e validado transacionalmente no Inventory, worker de limpeza e reconciliação; Redis TTL não é a fonte de verdade; evento de expiração via outbox |
 | R-10 | Distribuição desigual de trabalho no grupo | Média | Médio | Responsáveis por frente, revisão cruzada e acompanhamento no quadro do projeto |
 | R-11 | Rede blockchain indisponível, custosa ou controlada por poucos participantes; falsa percepção de que a cadeia garante por si só a legitimidade do ingresso | Média | Médio | Feature opcional e assíncrona; prova limitada à integridade/proveniência dos registros; comparar rede local permissionada e testnet, proteger chaves, não publicar dados pessoais e manter os fluxos convencionais disponíveis |
 
@@ -234,7 +239,7 @@ stateDiagram-v2
 | Eventos perdidos entre banco e Kafka | 0 |
 | Reservas expiradas devolvidas ao estoque dentro da tolerância | 100% |
 | Cobertura de testes de domínio | ≥ 70% |
-| Latência p95 de leitura do catálogo | < [Z] ms |
+| Latência p95 de leitura do catálogo | < 200 ms (meta inicial de teste) |
 | Tempo para subir o ambiente completo | Um comando (`docker compose up`) |
 | Builds de PR verdes na branch `develop` | 100% dos merges |
 
@@ -263,7 +268,7 @@ stateDiagram-v2
 
 ## 12. Próximos Passos
 
-1. Revisão deste documento pelo grupo e definição do nome final e das metas numéricas ([X], [Y], [Z]).
+1. Revisão pelo grupo das decisões do [Pacote 2](00-entrega-2.md) e posterior calibração das metas numéricas por testes.
 2. Elaboração do backlog (épicos e histórias) em Story Mapping: [03-backlog.md](03-backlog.md).
 3. Detalhamento dos requisitos não-funcionais: [04-requisitos-nao-funcionais.md](04-requisitos-nao-funcionais.md).
 4. Mockups e mapa de navegação: [05-mockups-mapa-navegacao.md](../Mockups/05-mockups-mapa-navegacao.md).
