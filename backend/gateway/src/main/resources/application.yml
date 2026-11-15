@@ -1,0 +1,53 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: gateway
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/gateway_db}
+    username: ${DB_USER:gateway}
+    password: ${DB_PASSWORD:local-gateway-secret}
+  flyway:
+    locations: classpath:db/common,classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+    consumer:
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER:http://localhost:8081/realms/pulsepass}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8081/realms/pulsepass/protocol/openid-connect/certs}
+pulsepass:
+  jwt:
+    audience: ${JWT_AUDIENCE:pulsepass-api}
+  service-name: gateway
+  gateway-key: ${GATEWAY_KEY:local-gateway-secret}
+  inventory-url: ${INVENTORY_URL:http://inventory:8080}
+  gateway-url: ${GATEWAY_URL:http://gateway:8080}
+  token-url: ${KEYCLOAK_TOKEN_URL:http://keycloak:8080/realms/pulsepass/protocol/openid-connect/token}
+  orders-client-secret: ${ORDERS_CLIENT_SECRET:local-orders-secret}
+  security:
+    enabled: false
+  messaging:
+    enabled: false
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db

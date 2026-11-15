@@ -1,5 +1,7 @@
 # PulsePass – Pacote 2: Arquitetura e Infraestrutura de Desenvolvimento
 
+> **Atualização de implementação — 15/11/2026:** O Pacote 2 permanece a baseline arquitetural de 19/10. O estágio de implementação, evidências e desvios desta proposta estão no [checkpoint do Pacote 3](11-checkpoint-pacote-3.md); execução e explicação nos documentos [12](12-guia-execucao.md) e [13](13-como-funciona.md). Descrições de componentes planejados abaixo não implicam que todos tenham sido implementados.
+
 **PUCRS – Construção de Software – 2026/2 | Grupo 10**
 
 **Integrantes:** João Vitor Krampe, Leticia Nunes, Francine Delanni, Luis Eduardo Trein e Enzo Picoli.

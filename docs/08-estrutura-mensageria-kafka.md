@@ -1,5 +1,7 @@
 # PulsePass – Estrutura de Mensageria Kafka
 
+> **Atualização de implementação — 15/11/2026:** A topologia efetivamente provisionada contém inventory.commands, inventory.reservations, orders.events e delivery.events, todos v1, com3partições e1réplica, além das três DLQs dos consumidores implementados. Tópicos de governança/Analytics/lifecycle não foram criados sem produtores/consumidores. Relay serializa publicação por banco para preservar ordem local; retry de consumidor é3vezes com1s, seguido de quarentena durável+outbox DLQ e bloqueio do agregado. Scripts/schemas e replay: [guia12](12-guia-execucao.md). As demais seções descrevem o alvo arquitetural e suas evoluções.
+
 **PUCRS – Construção de Software – 2026/2 | Grupo 10 | Pacote 2**
 
 **Versão:** 1.0 | **Data:** 19/10/2026 | **Status:** contratos e topologia propostos; tópicos ainda não provisionados.

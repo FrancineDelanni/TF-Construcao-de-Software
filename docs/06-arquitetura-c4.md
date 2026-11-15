@@ -1,5 +1,7 @@
 # PulsePass – Arquitetura de Software (C4)
 
+> **Atualização de implementação — 15/11/2026:** Os diagramas abaixo preservam a arquitetura alvo do Pacote2. Agora executam IAM, Inventory, Orders, Delivery e gateway; Analytics, SMTP, WebSocket, gestão de eventos/contas e check-in permanecem planejados. IAM usa Redis exclusivamente nesta fatia, sem banco SQL fictício. Confirmação/cancelamento passam por Kafka e Orders também reconcilia snapshot via HTTP antes de concluir Pago. Veja a sequência efetiva em [13](13-como-funciona.md) e o escopo em [11](11-checkpoint-pacote-3.md).
+
 **PUCRS – Construção de Software – 2026/2 | Grupo 10 | Pacote 2**
 
 **Integrantes:** João Vitor Krampe, Leticia Nunes, Francine Delanni, Luis Eduardo Trein e Enzo Picoli.

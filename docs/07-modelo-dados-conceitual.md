@@ -1,5 +1,7 @@
 # PulsePass – Modelo de Dados Conceitual
 
+> **Atualização de implementação — 15/11/2026:** O modelo conceitual abaixo continua mais amplo que as migrações implementadas. Bancos reais: inventory_db, orders_db, delivery_db, gateway_db e keycloak_db, com usuários exclusivos. IAM possui somente sessões Redis nesta fatia. Inventory V101 cria um lote inicial por evento, referência na oferta simplificada por assento e snapshots de nome/preço/lote; não há editor nem troca comercial de lotes. PDFs bytea e jobs/leases estão no Delivery. Tabelas exatas são as migrações em backend/*/src/main/resources/db; idempotência divergente usa409. [Detalhes](13-como-funciona.md).
+
 **PUCRS – Construção de Software – 2026/2 | Grupo 10 | Pacote 2**
 
 **Versão:** 1.0 | **Data:** 19/10/2026 | **Status:** modelo proposto para implementação e revisão do grupo.

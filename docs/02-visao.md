@@ -1,5 +1,7 @@
 # PulsePass – Documento de Visão do Produto
 
+> **Atualização de implementação — 15/11/2026:** A primeira jornada de compra está implementada com Keycloak, reserva PostgreSQL, checkout, Kafka e PDF. Catálogo é seed; gestão, Analytics, e-mail, WebSocket e check-in estão adiados. Escopo real e pendências por história: [checkpoint11](11-checkpoint-pacote-3.md). A visão ampla abaixo continua sendo objetivo do produto.
+
 **Plataforma Distribuída de Bilhetagem, Reserva e Acesso para Megaeventos**
 
 **PUCRS – Escola Politécnica | Construção de Software – 2026/2 | Projeto Integrador – Pacote 1**

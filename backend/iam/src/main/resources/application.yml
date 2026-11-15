@@ -1,0 +1,32 @@
+server:
+  port: 8080
+  error:
+    include-message: never
+spring:
+  application:
+    name: iam
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 3s
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,redis
+app:
+  public-url: ${APP_PUBLIC_URL:http://localhost:8080}
+  keycloak-public-url: ${KEYCLOAK_PUBLIC_URL:http://localhost:8081}
+  keycloak-internal-url: ${KEYCLOAK_INTERNAL_URL:http://localhost:8081}
+  client-id: ${OIDC_CLIENT_ID:pulsepass-web}
+  client-secret: ${OIDC_CLIENT_SECRET:local-web-secret}
+  session-encryption-key: ${SESSION_ENCRYPTION_KEY}

@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: delivery
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/delivery_db}
+    username: ${DB_USER:delivery}
+    password: ${DB_PASSWORD:local-delivery}
+  flyway:
+    locations: classpath:db/common,classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        delivery.timeout.ms: 5000
+        request.timeout.ms: 3000
+        linger.ms: 0
+    consumer:
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+pulsepass:
+  delivery:
+    key-directory: ${DELIVERY_KEY_DIRECTORY:./.local/delivery-keys}

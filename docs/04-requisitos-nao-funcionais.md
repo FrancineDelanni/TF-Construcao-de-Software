@@ -1,5 +1,7 @@
 # PulsePass – Requisitos Não-Funcionais (NFRs)
 
+> **Atualização de implementação — 15/11/2026:** Concorrência, atomicidade, prazo após locks, inbox/outbox e isolamento entre clientes possuem testes automatizados com dependências reais; consulte [11](11-checkpoint-pacote-3.md). Metas de carga, p95/p99, HA, limpeza sob pico e observabilidade completa continuam sem medição. Redis efetivamente guarda sessões IAM; cache de catálogo ainda não foi implementado.
+
 **PUCRS – Escola Politécnica | Construção de Software – 2026/2 | Projeto Integrador – Pacote 1**
 
 **Grupo:** [Grupo 10] | **Versão:** 1.1 | **Data:** 19/10/2026

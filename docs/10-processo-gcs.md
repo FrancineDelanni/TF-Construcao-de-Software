@@ -1,5 +1,7 @@
 # PulsePass – Gerenciamento da Configuração de Software (GCS)
 
+> **Atualização de implementação — 15/11/2026:** Código, migrações, contratos, realm fictício, Compose, Dockerfiles, lockfile e CI são agora itens reais. IDE, hooks locais de modernização, dependências, builds, .env e chaves privadas ficam fora do Git. O solicitante autorizou commit/push em15/11; não houve configuração presumida de proteção de branches, revisão humana, release ou envio acadêmico. Evidências atuais: [11](11-checkpoint-pacote-3.md).
+
 **PUCRS – Construção de Software – 2026/2 | Grupo 10 | Pacote 2**
 
 **Versão:** 1.0 | **Data:** 19/10/2026 | **Status:** processo proposto para adoção pelo grupo.

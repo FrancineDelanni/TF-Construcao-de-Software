@@ -1,5 +1,30 @@
 # PulsePass – Pipeline de Desenvolvimento e Infraestrutura
 
+## Estado executável — 15/11/2026
+
+O workflow [.github/workflows/ci.yml](../.github/workflows/ci.yml) implementa PRs e pushes em `develop`, com permissões `contents: read`, Actions fixadas por SHA e jobs backend/frontend/Compose. Backend executa Checkstyle, JUnit, JaCoCo, Failsafe/Testcontainers e package; frontend executa ESLint, TypeScript, Vitest e Vite. Compose tem smoke com OIDC real/PDF, logs em falha e parada preservando volumes. Os relatórios são retidos por14dias.
+
+Comandos reais:
+
+```sh
+cd backend
+./mvnw -B -ntp verify
+cd ../frontend
+npm ci
+npm run lint
+npm run typecheck
+npm run test:ci
+npm run build
+cd ..
+docker compose config --quiet
+docker compose up --build -d --wait --wait-timeout 300
+python3 scripts/smoke.py
+```
+
+JaCoCo exige70% de linhas nos pacotes de domínio e aplicação dos serviços de negócio, incluindo os casos de uso do Delivery. Não há exclusão das regras relevantes para satisfazer o percentual. `.mvn/jvm.config` fixa API Docker1.44 para compatibilidade Testcontainers/Docker29. As integrações não são silenciosamente ignoradas sem Docker.
+
+Execução local final e limitações estão em [11](11-checkpoint-pacote-3.md). Workflow versionado não é evidência de execução remota nem de bloqueio de merge. Publicação de imagens/release e proteções de branches permanecem etapas futuras. As seções seguintes preservam o planejamento original do Pacote2; itens não listados acima não são presumidos implementados.
+
 **PUCRS – Construção de Software – 2026/2 | Grupo 10 | Pacote 2**
 
 **Versão:** 1.0 | **Data:** 19/10/2026 | **Status:** especificação da pipeline e do ambiente futuro.
@@ -7,6 +32,8 @@
 ## 1. Objetivo e situação atual
 
 Este documento atende à descrição esquemática da pipeline pedida no Pacote 2. Define como validar Java/Spring Boot, React/TypeScript, contratos e infraestrutura. Nesta entrega documental não existem projetos executáveis, workflows GitHub Actions nem Compose funcional; os comandos abaixo são o contrato da implementação futura, não instruções que já funcionam no checkout atual.
+
+**Incremento após a preparação do Pacote 2:** `backend/orders` inicia somente o domínio da US-19, com testes unitários e Maven Wrapper. Esse incremento ainda não implementa API, CI, cobertura JaCoCo, integração ou Compose; a pipeline completa abaixo continua sendo o plano de desenvolvimento.
 
 Ferramentas propostas: GitHub Actions, Maven Wrapper, JUnit, JaCoCo, Testcontainers, ESLint, TypeScript e testes de frontend. Testes de carga são bônus do enunciado. A cobertura obrigatória é de pelo menos 70% do domínio backend, incluindo máquinas de estado; não se promete esse percentual sem relatório.
 

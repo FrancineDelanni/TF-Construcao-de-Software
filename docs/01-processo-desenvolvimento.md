@@ -1,5 +1,7 @@
 # PulsePass – Processo de Desenvolvimento Suportado por IA
 
+> **Atualização de implementação — 15/11/2026:** O incremento foi implementado com assistência Codex e revisões automatizadas entre frentes; evidências e limitações em [11](11-checkpoint-pacote-3.md) e [log de IA](../ai/log/2026-11-15-pacote-3.md). Revisão humana/DoD do grupo continuam pendentes. O solicitante autorizou commit e push em15/11; isso não representa aprovação coletiva.
+
 **PUCRS – Escola Politécnica | Construção de Software – 2026/2 | Projeto Integrador – Pacote 1**
 
 **Grupo:** [Grupo 10] | **Integrantes:** [João Vitor Krampe], [Leticia Nunes], [Francine Delanni], [Luis Eduardo Trein], [Enzo Picoli]

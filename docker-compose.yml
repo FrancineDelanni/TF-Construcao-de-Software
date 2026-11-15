@@ -1,0 +1,211 @@
+name: ${COMPOSE_PROJECT_NAME:-pulsepass}
+x-api-env: &api-env
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  JWT_ISSUER: http://localhost:8081/realms/pulsepass
+  JWT_JWK_SET_URI: http://keycloak:8080/realms/pulsepass/protocol/openid-connect/certs
+  JWT_AUDIENCE: pulsepass-api
+x-api: &api
+  restart: unless-stopped
+  healthcheck:
+    test: [CMD, curl, -fsS, http://localhost:8080/actuator/health/readiness]
+    interval: 10s
+    timeout: 5s
+    retries: 20
+    start_period: 60s
+  networks: [pulsepass]
+services:
+  postgres:
+    image: postgres:17.6
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-postgres-admin}
+      INVENTORY_DB_PASSWORD: ${INVENTORY_DB_PASSWORD:-local-inventory}
+      ORDERS_DB_PASSWORD: ${ORDERS_DB_PASSWORD:-local-orders}
+      DELIVERY_DB_PASSWORD: ${DELIVERY_DB_PASSWORD:-local-delivery}
+      GATEWAY_DB_PASSWORD: ${GATEWAY_DB_PASSWORD:-local-gateway}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-local-keycloak}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/01-databases.sh:/docker-entrypoint-initdb.d/01-databases.sh:ro
+    ports: ["127.0.0.1:5432:5432"]
+    networks: [pulsepass]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7.4.6
+    command: [redis-server, --appendonly, "yes"]
+    volumes: [redis-data:/data]
+    ports: ["127.0.0.1:6379:6379"]
+    networks: [pulsepass]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  kafka:
+    image: apache/kafka:3.9.1
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,EXTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    ports: ["127.0.0.1:29092:29092"]
+    volumes: [kafka-data:/var/lib/kafka/data]
+    networks: [pulsepass]
+    healthcheck:
+      test: [CMD, /opt/kafka/bin/kafka-topics.sh, --bootstrap-server, localhost:9092, --list]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+  kafka-init:
+    image: apache/kafka:3.9.1
+    entrypoint: [bash, /init-topics.sh]
+    volumes: [./infra/kafka/init-topics.sh:/init-topics.sh:ro]
+    depends_on:
+      kafka: {condition: service_healthy}
+    networks: [pulsepass]
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    environment:
+      KAFKA_CLUSTERS_0_NAME: pulsepass-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports: ["127.0.0.1:8082:8080"]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/actuator/health]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    depends_on:
+      kafka: {condition: service_healthy}
+    networks: [pulsepass]
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.2
+    command: [start-dev, --import-realm]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-local-keycloak}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-local-keycloak-admin}
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    volumes: [./infra/keycloak/pulsepass-realm.json:/opt/keycloak/data/import/pulsepass-realm.json:ro]
+    ports: ["127.0.0.1:8081:8080"]
+    networks: [pulsepass]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/9000; printf \"GET /health/ready HTTP/1.0\\r\\n\\r\\n\" >&3; IFS= read -r status <&3; [[ \"$$status\" == *200* ]]'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+  inventory:
+    <<: *api
+    build: {context: ., dockerfile: backend/Dockerfile, args: {SERVICE: inventory}}
+    environment:
+      <<: *api-env
+      DB_URL: jdbc:postgresql://postgres:5432/inventory_db
+      DB_USER: inventory
+      DB_PASSWORD: ${INVENTORY_DB_PASSWORD:-local-inventory}
+    ports: ["127.0.0.1:8083:8080"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      keycloak: {condition: service_healthy}
+      kafka-init: {condition: service_completed_successfully}
+  orders:
+    <<: *api
+    build: {context: ., dockerfile: backend/Dockerfile, args: {SERVICE: orders}}
+    environment:
+      <<: *api-env
+      DB_URL: jdbc:postgresql://postgres:5432/orders_db
+      DB_USER: orders
+      DB_PASSWORD: ${ORDERS_DB_PASSWORD:-local-orders}
+      INVENTORY_URL: http://inventory:8080
+      GATEWAY_URL: http://gateway:8080
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/pulsepass/protocol/openid-connect/token
+      ORDERS_CLIENT_SECRET: ${ORDERS_CLIENT_SECRET:-local-orders-secret}
+      GATEWAY_KEY: ${GATEWAY_KEY:-local-gateway-secret}
+    ports: ["127.0.0.1:8084:8080"]
+    depends_on:
+      inventory: {condition: service_healthy}
+      gateway: {condition: service_healthy}
+  delivery:
+    <<: *api
+    build: {context: ., dockerfile: backend/Dockerfile, args: {SERVICE: delivery}}
+    environment:
+      <<: *api-env
+      DB_URL: jdbc:postgresql://postgres:5432/delivery_db
+      DB_USER: delivery
+      DB_PASSWORD: ${DELIVERY_DB_PASSWORD:-local-delivery}
+      DELIVERY_KEY_DIRECTORY: /app/keys
+    volumes: [delivery-keys:/app/keys]
+    ports: ["127.0.0.1:8085:8080"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      keycloak: {condition: service_healthy}
+      kafka-init: {condition: service_completed_successfully}
+  gateway:
+    <<: *api
+    build: {context: ., dockerfile: backend/Dockerfile, args: {SERVICE: gateway}}
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/gateway_db
+      DB_USER: gateway
+      DB_PASSWORD: ${GATEWAY_DB_PASSWORD:-local-gateway}
+      GATEWAY_KEY: ${GATEWAY_KEY:-local-gateway-secret}
+    depends_on:
+      postgres: {condition: service_healthy}
+  iam:
+    <<: *api
+    build: {context: ., dockerfile: backend/Dockerfile, args: {SERVICE: iam}}
+    environment:
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      KEYCLOAK_PUBLIC_URL: http://localhost:8081
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      OIDC_CLIENT_ID: pulsepass-web
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-local-web-secret}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY:-bG9jYWwtZGVtby1rZXktMzJieXRlcy0wMTIzNDU2Nzg=}
+    ports: ["127.0.0.1:8086:8080"]
+    depends_on:
+      redis: {condition: service_healthy}
+      keycloak: {condition: service_healthy}
+  frontend:
+    build: {context: ./frontend}
+    ports: ["127.0.0.1:8080:8080"]
+    networks: [pulsepass]
+    depends_on:
+      iam: {condition: service_healthy}
+      inventory: {condition: service_healthy}
+      orders: {condition: service_healthy}
+      delivery: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/health]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+volumes:
+  postgres-data:
+  redis-data:
+  kafka-data:
+  delivery-keys:
+networks:
+  pulsepass:

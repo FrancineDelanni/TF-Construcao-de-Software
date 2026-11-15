@@ -1,5 +1,7 @@
 # PulsePass – Mockups e Mapa de Navegação
 
+> **Atualização de implementação — 15/11/2026:** A SPA implementa entrada delegada ao Keycloak, catálogo, mapa com multisseleção, checkout, acompanhamento/histórico e download PDF pelos próprios pedidos. Polling substitui WebSocket nesta fatia; emissão pendente/recusa/timeout/conflito são explícitos. Telas administrativas, e-mail, check-in e painel analítico permanecem referências futuras. O HTML original continua preservado; escopo e testes em [checkpoint11](../docs/11-checkpoint-pacote-3.md).
+
 **PUCRS – Escola Politécnica | Construção de Software – 2026/2 | Projeto Integrador – Pacote 1**
 
 **Grupo:** [Grupo 10] | **Integrantes:** [João Vitor Krampe], [Leticia Nunes], [Francine Delanni], [Luis Eduardo Trein], [Enzo Picoli]
