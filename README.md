@@ -13,6 +13,7 @@ Comece pelos documentos:
 - [11 — Checkpoint e limites do Pacote 3](docs/11-checkpoint-pacote-3.md)
 - [12 — Como executar e demonstrar](docs/12-guia-execucao.md)
 - [13 — Como o sistema funciona](docs/13-como-funciona.md)
+- [14 — Organização do código e responsabilidades](docs/14-organizacao-projeto.md)
 
 Com Docker ativo, na raiz:
 
@@ -61,6 +62,8 @@ As garantias centrais são zero overselling, reservas com validade de dez minuto
 Abra os arquivos Markdown no GitHub ou em um preview com suporte a Mermaid. As visões C4 usam fluxogramas com fronteiras e tipos explícitos. O modelo conceitual usa diagrama entidade-relacionamento. Os blocos Mermaid são a fonte editável e devem acompanhar alterações futuras.
 
 ## Código e testes
+
+O frontend é organizado por funcionalidades em `frontend/src/features`, com composição em `app` e utilitários em `shared`. Os serviços Java separam `api`, `application`, `domain` e `infrastructure` conforme suas responsabilidades. O [guia de organização](docs/14-organizacao-projeto.md) detalha o mapa, as dependências e as convenções. Para a arquitetura implementada, consulte o documento 13; os diagramas do documento 06 representam a arquitetura alvo.
 
 `backend/common` contém segurança JWT, outbox/inbox e retry/quarentena; `inventory` é a autoridade das reservas; `orders` integra a máquina de estados original ao checkout durável; `delivery` emite PDF/QR assinado; `iam` protege sessões Redis; `gateway` simula resultados. Cada banco tem proprietário e migrações exclusivos.
 

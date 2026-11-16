@@ -22,7 +22,7 @@
   <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><configuration><systemPropertyVariables><api.version>1.44</api.version></systemPropertyVariables></configuration><executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions></plugin>
   <plugin><groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId><version>${jacoco.version}</version><executions>
    <execution><goals><goal>prepare-agent</goal></goals></execution>
-   <execution><id>report</id><phase>verify</phase><goals><goal>report</goal><goal>check</goal></goals><configuration><rules><rule><element>PACKAGE</element><includes><include>*/domain</include><include>*/application</include><include>br/pucrs/pulsepass/delivery</include><include>*.domain</include><include>*.application</include><include>br.pucrs.pulsepass.delivery</include></includes><limits><limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.70</minimum></limit></limits></rule></rules></configuration></execution>
+   <execution><id>report</id><phase>verify</phase><goals><goal>report</goal><goal>check</goal></goals><configuration><rules><rule><element>PACKAGE</element><includes><include>*/domain</include><include>*/application</include><include>br/pucrs/pulsepass/delivery/infrastructure/pdf</include><include>*.domain</include><include>*.application</include><include>br.pucrs.pulsepass.delivery.infrastructure.pdf</include></includes><limits><limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.70</minimum></limit></limits></rule></rules></configuration></execution>
   </executions></plugin>
  </plugins></build>
 </project>

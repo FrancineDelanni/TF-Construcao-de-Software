@@ -1,0 +1,16 @@
+export const labels: Record<string, string> = {
+  CREATED: "Criado",
+  RESERVED: "Reservado",
+  AWAITING_PAYMENT: "Aguardando confirmação",
+  PAID: "Pago",
+  EXPIRED: "Expirado",
+  CANCELLED: "Cancelado",
+  AVAILABLE: "Livre",
+  FREE: "Livre",
+  SOLD: "Vendido",
+  HELD: "Reservado",
+  ACTIVE: "Ativa",
+  DECLINED: "Recusado",
+  PENDING: "Pendente",
+  APPROVED: "Aprovado",
+};
