@@ -1,3 +1,15 @@
+package br.pucrs.pulsepass.inventory.api;
+
+import br.pucrs.pulsepass.inventory.application.OrganizerEventService;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @RequestMapping("/api/inventory/organizer/events")
 @PreAuthorize("hasRole('Organizador')")
